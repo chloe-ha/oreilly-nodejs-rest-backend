@@ -39,7 +39,7 @@ app.use((req, res, next) => {
 app.use('/feed', feedRoutes);
 app.use('/auth', authRoutes);
 
-app.use((err, req, res, next) => {
+app.use((err, req, res) => {
   console.log(err);
   const { statusCode = 500, message, data = [] } = err;
   res.status(statusCode).json({ message, data });
