@@ -15,7 +15,7 @@ const fileStorage = multer.diskStorage({
   },
   filename: (req, file, callback) => {
     callback(null, `${Date.now()}-${file.originalname}`);
-  }
+  },
 });
 const fileFilter = (req, file, callback) => {
   if (['image/jpeg', 'image/jpg', 'image/png'].includes(file.mimetype)) {
@@ -45,9 +45,10 @@ app.use((err, req, res, next) => {
   res.status(statusCode).json({ message, data });
 });
 
-mongoose.connect('mongodb+srv://user:user@cluster0.psshf.mongodb.net/feed')
+mongoose
+  .connect('mongodb+srv://user:user@cluster0.psshf.mongodb.net/feed')
   .then(() => {
     console.log('# Connected to mongoDB');
     app.listen(8080);
   })
-  .catch(err => console.log(err));
+  .catch((err) => console.log(err));

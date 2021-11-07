@@ -16,11 +16,7 @@ exports.getPosts = async (req, res, next) => {
       .skip((currentPage - 1) * perPage)
       .limit(perPage);
 
-    return res.status(200).json({
-      message: 'Posts fetched',
-      totalItems,
-      posts
-    });
+    return res.status(200).json({ message: 'Posts fetched', totalItems, posts });
   } catch (err) {
     if (!err.statusCode) {
       err.statusCode = 500;
@@ -111,7 +107,7 @@ exports.updatePost = async (req, res, next) => {
       throw error;
     }
     if (post.creator.toString() !== req.userId) {
-      const error = new Error('Could not update someone else\'s post');
+      const error = new Error("Could not update someone else's post");
       error.statusCode = 403;
       throw error;
     }
@@ -125,10 +121,7 @@ exports.updatePost = async (req, res, next) => {
     post.imageUrl = imageUrl;
     const result = await post.save();
 
-    return res.status(200).json({
-      message: 'Post updated successfully',
-      post: result
-    });
+    return res.status(200).json({ message: 'Post updated successfully', post: result });
   } catch (err) {
     if (!err.statusCode) {
       err.statusCode = 500;
@@ -149,7 +142,7 @@ exports.deletePost = async (req, res, next) => {
       throw error;
     }
     if (post.creator.toString() !== req.userId) {
-      const error = new Error('Could not delete someone else\'s post');
+      const error = new Error("Could not delete someone else's post");
       error.statusCode = 403;
       throw error;
     }
@@ -166,7 +159,7 @@ exports.deletePost = async (req, res, next) => {
 
     return res.status(200).json({
       message: 'Post deleted successfully',
-      post: post
+      post: post,
     });
   } catch (err) {
     if (!err.statusCode) {
@@ -176,7 +169,7 @@ exports.deletePost = async (req, res, next) => {
   }
 };
 
-const clearImage = filePath => {
+const clearImage = (filePath) => {
   const file = path.join(__dirname, '..', filePath);
-  fs.unlink(file, err => console.log(err));
+  fs.unlink(file, (err) => console.log(err));
 };
