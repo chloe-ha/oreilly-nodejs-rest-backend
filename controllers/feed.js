@@ -2,7 +2,9 @@ const fs = require('fs');
 const path = require('path');
 
 const { validationResult } = require('express-validator');
+
 const Post = require('../models/post');
+const User = require('../models/user');
 
 exports.getPosts = (req, res, next) => {
   const currentPage = Number(req.query.page) || 1;
@@ -37,6 +39,7 @@ exports.createPost = (req, res, next) => {
   if (!errors.isEmpty()) {
     const error = new Error('Validation failed, entered data is incorrect');
     error.statusCode = 422;
+    error.data = errors.array();
     throw error;
   }
   if (!req.file) {
@@ -48,12 +51,23 @@ exports.createPost = (req, res, next) => {
   const { title, content } = req.body;
   const imageUrl = req.file.path;
 
-  return new Post({ title, imageUrl, content, creator: { name: 'Chloe' } })
+  let creator;
+  let newPost;
+  new Post({ title, imageUrl, content, creator: req.userId })
     .save()
-    .then(result => {
+    .then(post => {
+      newPost = post;
+      return User.findById(req.userId);
+    })
+    .then(user => {
+      creator = user;
+      user.posts.push(newPost);
+      return user.save();
+    })
+    .then(() => {
       return res.status(201).json({
         message: 'Post created successfully',
-        post: result
+        post: newPost
       });
     })
     .catch(err => {
@@ -90,6 +104,7 @@ exports.updatePost = (req, res, next) => {
   if (!errors.isEmpty()) {
     const error = new Error('Validation failed, entered data is incorrect');
     error.statusCode = 422;
+    error.data = errors.array();
     throw error;
   }
 
@@ -109,6 +124,11 @@ exports.updatePost = (req, res, next) => {
       if (!post) {
         const error = new Error('Could not find post');
         error.statusCode = 404;
+        throw error;
+      }
+      if (post.creator.toString() !== req.userId) {
+        const error = new Error('Could not update someone else\'s post');
+        error.statusCode = 403;
         throw error;
       }
 
@@ -137,6 +157,7 @@ exports.updatePost = (req, res, next) => {
 
 exports.deletePost = (req, res, next) => {
   const postId = req.params.postId;
+  let postToDelete;
   let imageUrl = '';
   return Post.findById(postId)
     .then((post) => {
@@ -145,16 +166,29 @@ exports.deletePost = (req, res, next) => {
         error.statusCode = 404;
         throw error;
       }
+      if (post.creator.toString() !== req.userId) {
+        const error = new Error('Could not delete someone else\'s post');
+        error.statusCode = 403;
+        throw error;
+      }
+      postToDelete = post;
       imageUrl = post.imageUrl;
       return Post.findByIdAndRemove(postId);
     })
-    .then(result => {
+    .then(() => {
       if (imageUrl) {
         clearImage(imageUrl);
       }
+      return User.findById(req.userId);
+    })
+    .then(user => {
+      user.posts.pull(postId);
+      return user.save();
+    })
+    .then(() => {
       return res.status(200).json({
         message: 'Post deleted successfully',
-        post: result
+        post: postToDelete
       });
     })
     .catch(err => {
