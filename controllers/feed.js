@@ -3,6 +3,7 @@ const path = require('path');
 
 const { validationResult } = require('express-validator');
 
+const socket = require('../socket');
 const Post = require('../models/post');
 const User = require('../models/user');
 
@@ -13,6 +14,8 @@ exports.getPosts = async (req, res, next) => {
   try {
     const totalItems = await Post.find().countDocuments();
     const posts = await Post.find()
+      .populate('creator', 'name')
+      .sort({ createdAt: -1 })
       .skip((currentPage - 1) * perPage)
       .limit(perPage);
 
@@ -48,7 +51,14 @@ exports.createPost = async (req, res, next) => {
     creator.posts.push(post);
     await creator.save();
 
-    return res.status(201).json({ message: 'Post created successfully', post });
+    const postWithCreator = await Post.findById(post._id).populate('creator', 'name');
+
+    socket.getIO().emit('posts', { action: 'create', post: postWithCreator });
+
+    return res.status(201).json({
+      message: 'Post created successfully',
+      post: postWithCreator,
+    });
   } catch (err) {
     if (!err.statusCode) {
       err.statusCode = 500;
@@ -120,8 +130,11 @@ exports.updatePost = async (req, res, next) => {
     post.content = content;
     post.imageUrl = imageUrl;
     const result = await post.save();
+    const resultWithCreator = await Post.findById(result._id).populate('creator', 'name');
 
-    return res.status(200).json({ message: 'Post updated successfully', post: result });
+    socket.getIO().emit('posts', { action: 'update', post: resultWithCreator });
+
+    return res.status(200).json({ message: 'Post updated successfully', post: resultWithCreator });
   } catch (err) {
     if (!err.statusCode) {
       err.statusCode = 500;
@@ -156,6 +169,8 @@ exports.deletePost = async (req, res, next) => {
     const user = await User.findById(req.userId);
     user.posts.pull(postId);
     await user.save();
+
+    socket.getIO().emit('posts', { action: 'delete', post: postId });
 
     return res.status(200).json({
       message: 'Post deleted successfully',

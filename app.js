@@ -4,6 +4,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const multer = require('multer');
 
+const socket = require('./socket');
 const feedRoutes = require('./routes/feed');
 const authRoutes = require('./routes/auth');
 
@@ -49,6 +50,9 @@ mongoose
   .connect('mongodb+srv://user:user@cluster0.psshf.mongodb.net/feed')
   .then(() => {
     console.log('# Connected to mongoDB');
-    app.listen(8080);
+    const server = app.listen(8080);
+    socket.init(server).on('connection', () => {
+      console.log('# Client connected');
+    });
   })
   .catch((err) => console.log(err));
