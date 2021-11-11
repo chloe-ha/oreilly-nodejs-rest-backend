@@ -7,7 +7,7 @@
     "test": "mocha",
     "test:coverage": "nyc --reporter=html mocha",
     "start": "nodemon app.js",
-    "format": "prettier --write './**/*.js'",
+    "format": "prettier --write './**/*.{js,ts}' --ignore-path .gitignore",
     "prepare": "husky install",
     "lint": "eslint --fix './**/*.js'"
   },
@@ -39,7 +39,7 @@
   },
   "husky": {
     "hooks": {
-      "pre-commit": "prettier --write './**/*.js'"
+      "pre-commit": "npm run format"
     }
   }
 }
