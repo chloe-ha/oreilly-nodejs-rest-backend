@@ -14,7 +14,7 @@ exports.signup = (req, res, next) => {
   }
 
   const { email, name, password } = req.body;
-  bcrypt
+  return bcrypt
     .hash(password, 12)
     .then((hashedPassword) => {
       const user = new User({ email, name, password: hashedPassword });
@@ -23,7 +23,7 @@ exports.signup = (req, res, next) => {
     .then((result) => {
       return res.status(201).json({
         message: 'User created',
-        userId: result._id,
+        userId: result._id.toString(),
       });
     })
     .catch((err) => {
@@ -31,44 +31,43 @@ exports.signup = (req, res, next) => {
         err.statusCode = 500;
       }
       next(err);
+      return err;
     });
 };
 
-exports.login = (req, res, next) => {
+exports.login = async (req, res, next) => {
   const { email, password } = req.body;
-  let fetchedUser;
 
-  User.findOne({ email })
-    .then((user) => {
-      if (!user) {
-        const error = new Error('Wrong username or password');
-        error.statusCode = 401;
-        throw error;
-      }
-      fetchedUser = user;
-      return bcrypt.compare(password, user.password);
-    })
-    .then((doMatch) => {
-      if (!doMatch) {
-        const error = new Error('Wrong username or password');
-        error.statusCode = 401;
-        throw error;
-      }
-      const userId = fetchedUser._id.toString();
-      const token = jwt.sign(
-        {
-          email: fetchedUser.email,
-          userId,
-        },
-        'JWT_SECRET_KEY',
-        { expiresIn: '1h' },
-      );
-      return res.status(200).json({ token, userId });
-    })
-    .catch((err) => {
-      if (!err.statusCode) {
-        err.statusCode = 500;
-      }
-      next(err);
-    });
+  try {
+    const user = await User.findOne({ email });
+    if (!user) {
+      const error = new Error('Wrong username or password');
+      error.statusCode = 401;
+      throw error;
+    }
+    const doPasswordMatch = await bcrypt.compare(password, user.password);
+    if (!doPasswordMatch) {
+      const error = new Error('Wrong username or password');
+      error.statusCode = 401;
+      throw error;
+    }
+
+    const userId = user._id.toString();
+    const token = jwt.sign(
+      {
+        email: user.email,
+        userId,
+      },
+      'JWT_SECRET_KEY',
+      { expiresIn: '1h' },
+    );
+    res.status(200).json({ token, userId });
+    return;
+  } catch (err) {
+    if (!err.statusCode) {
+      err.statusCode = 500;
+    }
+    next(err);
+    return err;
+  }
 };

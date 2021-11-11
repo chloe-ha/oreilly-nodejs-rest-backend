@@ -40,6 +40,12 @@ app.use((req, res, next) => {
 app.use('/feed', feedRoutes);
 app.use('/auth', authRoutes);
 
+app.use(() => {
+  const error = new Error('Route not found');
+  error.statusCode = 404;
+  throw error;
+});
+
 app.use((err, req, res) => {
   console.log(err);
   const { statusCode = 500, message, data = [] } = err;

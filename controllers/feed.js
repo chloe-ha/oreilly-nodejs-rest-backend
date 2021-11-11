@@ -49,21 +49,23 @@ exports.createPost = async (req, res, next) => {
     const post = await new Post({ title, imageUrl, content, creator: req.userId }).save();
     const creator = await User.findById(req.userId);
     creator.posts.push(post);
-    await creator.save();
+    const savedUser = await creator.save();
 
     const postWithCreator = await Post.findById(post._id).populate('creator', 'name');
 
     socket.getIO().emit('posts', { action: 'create', post: postWithCreator });
 
-    return res.status(201).json({
+    res.status(201).json({
       message: 'Post created successfully',
       post: postWithCreator,
     });
+    return savedUser;
   } catch (err) {
     if (!err.statusCode) {
       err.statusCode = 500;
     }
     next(err);
+    return err;
   }
 };
 
